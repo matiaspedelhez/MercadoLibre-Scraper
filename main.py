@@ -2,6 +2,8 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 import os
+import time
+from sqlalchemy import create_engine
 
 class Scraper():
 
@@ -88,7 +90,10 @@ class Scraper():
             # Get the html of the page
             response = requests.get(url)
             soup = BeautifulSoup(response.text, 'html.parser')
-                
+            
+            # Get the current timestamp
+            timestamp = int(time.time())
+            
             # take all posts
             content = soup.find_all('li', class_='ui-search-layout__item')
             
@@ -119,6 +124,8 @@ class Scraper():
 
                 # save in a dictionary
                 post_data = {
+                    "timestamp": timestamp,
+                    "query": cleaned_name,
                     "title": title,
                     "price": price,
                     "post link": post_link,
@@ -132,9 +139,17 @@ class Scraper():
         # export to a csv file
         df = pd.DataFrame(self.data)
         df.to_csv(r"data/mercadolibre_scraped_data.csv", sep=";")
+        
+    def export_to_postgres(self):
+        # export to postgres db for further analysis
+        engine = create_engine('postgresql://username:password@localhost:5432/mydatabase')
+        
+        df = pd.DataFrame(self.data)
+        df.to_sql('meli_tbl', engine)
 
 if __name__ == "__main__":
     s = Scraper()
     s.menu()
     s.scraping()
     s.export_to_csv()
+    #s.export_to_postgres()
